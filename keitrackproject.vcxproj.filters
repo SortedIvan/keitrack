@@ -19,4 +19,8 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Font Include="src\testfont.ttf" />
+    <Font Include="testfont.ttf" />
+  </ItemGroup>
 </Project>
