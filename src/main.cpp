@@ -18,6 +18,24 @@ static const int keystrokeOutlineThickness = 3;
     TODO: Move these away        
 */ 
 
+struct Line {
+    sf::VertexArray line;
+    sf::Color lineColor;
+
+    Line(sf::Color lineColor, sf::Vector2f pointA, sf::Vector2f pointB) {
+        line = sf::VertexArray(sf::Lines, 2);
+        line[0].position = pointA;
+        line[0].color = lineColor;
+        line[1].position = pointB;
+        line[1].color = lineColor;
+    }
+
+    void draw(sf::RenderWindow& window) {
+        window.draw(line);
+    }
+};
+
+
 class Point {
 private:
     sf::CircleShape shape; // Using a small circle to represent the point
@@ -86,6 +104,8 @@ void createAndAddVisibleKeystroke(char keystrokeChar, sf::Font& font,
 void tryLoadFont(sf::Font& font, std::string path);
 void moveKeystrokesWhenNewAdded(std::deque<Keystroke>& visibleKeystrokes);
 void drawVisibleKeystrokes(std::deque<Keystroke>& visibleKeystrokes, sf::RenderWindow& window);
+void slideVisibleKeystrokes(std::deque<Keystroke>& visibleKeystrokes,
+    float deltaTime, float slideSpeedMultiplier, float slideSpeed);
 
 int main()
 {
@@ -95,18 +115,29 @@ int main()
     
     sf::Event e;
     
-    // ====== LOAD FONTS ======
     sf::Font keystrokeFont;
     tryLoadFont(keystrokeFont, "./joystix.otf");
     std::deque<Keystroke> visibleKeystrokes;
 
     Keystroke testKeystroke('T', sf::Color::Yellow, sf::Color::White, sf::Color::Green, keystrokeFont);
     testKeystroke.setPosition(spawnPoint);
+    
+    sf::Clock deltaTimeClock;
+    sf::Time deltaTime;
+    window.setFramerateLimit(60); 
 
+    float slideEffectStopDuration = 0.25f;
+    sf::Clock slideEffectStopClock;
+    bool slideEffectStopEvent = false;
+
+    sf::Color teal(0, 128, 128, 128);
+    Line line(teal, sf::Vector2f(25, 100), sf::Vector2f(375, 100));
 
     // Main loop
     while (window.isOpen())
     {
+        deltaTime = deltaTimeClock.restart();
+
         while (window.pollEvent(e))
         {
             if (e.type == sf::Event::Closed)
@@ -116,22 +147,43 @@ int main()
 
             if (e.type == sf::Event::TextEntered)
             {
+                slideEffectStopClock.restart();
+                slideEffectStopEvent = true;
+
                 char press = e.text.unicode;
                 createAndAddVisibleKeystroke(press, keystrokeFont, visibleKeystrokes);
             }
-
-            // Run updates
-
-            // Clear the window
-            window.clear(backgroundColor);
-
-            // draw
-            drawVisibleKeystrokes(visibleKeystrokes, window);
-
-
-            // display
-            window.display();
         }
+
+        // Run updates
+        if (slideEffectStopEvent && slideEffectStopClock.getElapsedTime().asSeconds() >= slideEffectStopDuration) {
+            slideEffectStopEvent = false;
+        }
+
+        if (!slideEffectStopEvent) {
+            slideVisibleKeystrokes(visibleKeystrokes, deltaTime.asSeconds(), 2.f, 100.f);
+        }
+
+         // Clear the window
+        window.clear(backgroundColor);
+
+          
+        line.draw(window);
+        // draw
+        drawVisibleKeystrokes(visibleKeystrokes, window);
+
+        // display
+        window.display();
+    }
+}
+
+
+void slideVisibleKeystrokes(std::deque<Keystroke>& visibleKeystrokes, 
+                            float deltaTime, float slideSpeedMultiplier, float slideSpeed) {;
+    sf::Vector2f velocity(deltaTime * slideSpeedMultiplier * slideSpeed , 0);
+
+    for (auto it = visibleKeystrokes.begin(); it != visibleKeystrokes.end(); ++it) {
+        it->setPosition(it->position - velocity);
     }
 }
 
